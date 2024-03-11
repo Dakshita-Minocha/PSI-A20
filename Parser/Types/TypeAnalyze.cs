@@ -87,9 +87,9 @@ public class TypeAnalyze : Visitor<NType> {
       return Void;
    }
 
-   public override NType Visit (NCallStmt c) {
-      throw new NotImplementedException ();
-   }
+   public override NType Visit (NCallStmt c)
+      => mSymbols.Find (c.Name.Text) is NFnDecl fd ? fd.Return :
+         throw new ParseException (c.Name, $"There is no function {c.Name} that accepts {c.Params.Length} parameters");
    #endregion
 
    #region Expression --------------------------------------
@@ -139,9 +139,9 @@ public class TypeAnalyze : Visitor<NType> {
       throw new ParseException (d.Name, "Unknown variable");
    }
 
-   public override NType Visit (NFnCall f) {
-      throw new NotImplementedException ();
-   }
+   public override NType Visit (NFnCall f)
+      => mSymbols.Find (f.Name.Text) is NFnDecl fc ? f.Type = fc.Return :
+         throw new ParseException (f.Name, $"There is no function {f.Name} that returns {f.Type}");
 
    public override NType Visit (NTypeCast c) {
       c.Expr.Accept (this); return c.Type;
