@@ -14,6 +14,11 @@ public class PSIPrint : Visitor<StringBuilder> {
       => Visit (b.Declarations, b.Body);
 
    public override StringBuilder Visit (NDeclarations d) {
+      if (d.Consts.Length > 0) {
+         NWrite ("const"); N++;
+         foreach (var c in d.Consts) { Visit (c); }
+         N--;
+      }
       if (d.Vars.Length > 0) {
          NWrite ("var"); N++;
          foreach (var g in d.Vars.GroupBy (a => a.Type))
@@ -41,6 +46,9 @@ public class PSIPrint : Visitor<StringBuilder> {
       return S;
    }
 
+   public override StringBuilder Visit (NConst c)
+      => NWrite ($"{c.Name} = {c.Value}");
+   
    public override StringBuilder Visit (NTypeCast c) {
       Write ($"({c.Type})"); return c.Expr.Accept (this); 
    }

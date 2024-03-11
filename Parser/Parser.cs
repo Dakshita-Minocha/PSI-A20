@@ -30,7 +30,8 @@ public class Parser {
 
    // declarations = [var-decls] [procfn-decls] .
    NDeclarations Declarations () {
-      var variables = Match (VAR) ? VarDecls () : new NVarDecl[0];
+      var consts = Match (CONST) ? Constants () : Array.Empty<NConst> ();
+      var variables = Match (VAR) ? VarDecls () : Array.Empty<NVarDecl> ();
       List<NFnDecl> funcs = new ();
       while (Match (FUNCTION, PROCEDURE)) {
          var (function, rtype) = (Prev.Kind == FUNCTION, NType.Void);
@@ -40,7 +41,7 @@ public class Parser {
          Expect (SEMI);
          funcs.Add (new NFnDecl (name, pars, rtype, Block ()));
       }
-      return new (variables, funcs.ToArray ());
+      return new (variables, funcs.ToArray (), consts);
    }
 
    // ident-list = IDENT { "," IDENT }
@@ -59,6 +60,24 @@ public class Parser {
          Match (SEMI);
       }
       return vars.ToArray ();
+   }
+
+   // consts = IDENT ":=" LITERAL
+   NConst[] Constants () {
+      var constList = new List<NConst> ();
+      NType type = Unknown;
+      while (Match (IDENT)) {
+         var variable = mPrevious;
+         Expect (ASSIGN);
+         if (Match (L_INTEGER, L_REAL, L_BOOLEAN, L_CHAR, L_STRING))
+            type = mPrevious.Kind switch {
+               L_INTEGER => Int, L_REAL => Real, L_BOOLEAN => Bool, L_CHAR => Char,
+               L_STRING => String, _ => throw new ParseException (mPrevious, "Unexpected Variable")};
+         else Unexpected ();
+         constList.Add (new NConst (variable, type, mPrevious));
+         Match (SEMI);
+      }
+      return constList.ToArray ();
    }
 
    // type = integer | real | boolean | string | char
