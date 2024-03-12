@@ -27,16 +27,22 @@ public class TypeAnalyze : Visitor<NType> {
    }
 
    public override NType Visit (NVarDecl d) {
+      if (mSymbols.FindInScope (d.Name.Text) != null)
+         throw new ParseException (d.Name, $"{d.Name} already exists in scope");
       mSymbols.Vars.Add (d);
       return d.Type;
    }
 
    public override NType Visit (NFnDecl f) {
+      if (mSymbols.FindInScope (f.Name.Text) != null)
+         throw new ParseException (f.Name, $"{f.Name} already exists in scope");
       mSymbols.Funcs.Add (f);
       return f.Return;
    }
 
    public override NType Visit (NConst c) {
+      if (mSymbols.FindInScope (c.Name.Text) != null)
+         throw new ParseException (c.Name, $"{c.Name} already exists in scope");
       mSymbols.Consts.Add (c);
       return c.Type;
    }
@@ -60,7 +66,7 @@ public class TypeAnalyze : Visitor<NType> {
          (Int, Real) or (Char, Int) or (Char, String) => true,
          _ => false
       };
-      if (!valid) throw new ParseException (token, "Invalid type");
+      if (!valid) throw new ParseException (token, $"Cannot convert from {source.Type} to {target}");
       return new NTypeCast (source) { Type = target };
    }
 
@@ -92,9 +98,17 @@ public class TypeAnalyze : Visitor<NType> {
       return Void;
    }
 
-   public override NType Visit (NCallStmt c)
-      => mSymbols.Find (c.Name.Text) is NFnDecl fd ? fd.Return :
+   public override NType Visit (NCallStmt c) {
+      var fd = mSymbols.Find (c.Name.Text) as NFnDecl;
+      c.Params.ForEach (x => x.Accept (this));
+      if (c.Params.Length != fd?.Params.Length)
          throw new ParseException (c.Name, $"There is no function {c.Name} that accepts {c.Params.Length} parameters");
+      int i = 0;
+      foreach (var fdParams in fd.Params)
+         if (fdParams.Type != c.Params[i++].Type)
+            c.Params[i - 1] = AddTypeCast (c.Name, c.Params[i - 1], fdParams.Type);
+      return fd.Return;
+   }
    #endregion
 
    #region Expression --------------------------------------
