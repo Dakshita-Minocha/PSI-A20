@@ -20,7 +20,7 @@ public record NBlock (NDeclarations Declarations, NCompoundStmt Body) : Node {
 }
 
 // The declarations section precedes the body of every block
-public record NDeclarations (NVarDecl[] Vars, NFnDecl[] Funcs) : Node {
+public record NDeclarations (NVarDecl[] Vars, NFnDecl[] Funcs, NConst[] Consts) : Node {
    public override T Accept<T> (Visitor<T> visitor) => visitor.Visit (this);
 }
 
@@ -34,6 +34,12 @@ public record NVarDecl (Token Name, NType Type) : Node {
 public record NFnDecl (Token Name, NVarDecl[] Params, NType Return, NBlock? Body) : Node {
    public override T Accept<T> (Visitor<T> visitor) => visitor.Visit (this);
    public override string ToString () => $"{Return} {Name} ({Params.ToCSV ()})";
+}
+
+// Declares a Constant
+public record NConst (Token Name, NType Type, Token Value) : Node {
+   public override T Accept<T> (Visitor<T> visitor) => visitor.Visit (this);
+   public override string ToString () => $"{Name} {Value}";
 }
 #endregion
 

@@ -11,14 +11,27 @@ public enum NType { Unknown, Int, Real, Bool, String, Char, Error, Void }
 public class SymTable {
    public List<NVarDecl> Vars = new ();
    public List<NFnDecl> Funcs = new ();
+   public List<NConst> Consts = new ();
    public SymTable? Parent;
 
    public Node? Find (string name) {
+      var node0 = Consts.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
+      if (node0 != null) return node0;
       var node1 = Vars.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
       if (node1 != null) return node1;
       var node2 = Funcs.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
       if (node2 != null) return node2;
       return Parent?.Find (name);
+   }
+
+   public Node? FindInScope (string name) {
+      var node0 = Consts.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
+      if (node0 != null) return node0;
+      var node1 = Vars.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
+      if (node1 != null) return node1;
+      var node2 = Funcs.FirstOrDefault (a => a.Name.Text.EqualsIC (name));
+      if (node2 != null) return node2;
+      return null;
    }
 
    // Contains symbols for the PSILib runtime library

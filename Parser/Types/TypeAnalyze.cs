@@ -23,17 +23,28 @@ public class TypeAnalyze : Visitor<NType> {
    }
 
    public override NType Visit (NDeclarations d) {
-      Visit (d.Vars); return Visit (d.Funcs);
+      Visit (d.Consts); Visit (d.Vars); return Visit (d.Funcs);
    }
 
    public override NType Visit (NVarDecl d) {
+      if (mSymbols.FindInScope (d.Name.Text) != null)
+         throw new ParseException (d.Name, $"{d.Name} already exists in scope");
       mSymbols.Vars.Add (d);
       return d.Type;
    }
 
    public override NType Visit (NFnDecl f) {
+      if (mSymbols.FindInScope (f.Name.Text) != null)
+         throw new ParseException (f.Name, $"{f.Name} already exists in scope");
       mSymbols.Funcs.Add (f);
       return f.Return;
+   }
+
+   public override NType Visit (NConst c) {
+      if (mSymbols.FindInScope (c.Name.Text) != null)
+         throw new ParseException (c.Name, $"{c.Name} already exists in scope");
+      mSymbols.Consts.Add (c);
+      return c.Type;
    }
    #endregion
 
@@ -55,7 +66,7 @@ public class TypeAnalyze : Visitor<NType> {
          (Int, Real) or (Char, Int) or (Char, String) => true,
          _ => false
       };
-      if (!valid) throw new ParseException (token, "Invalid type");
+      if (!valid) throw new ParseException (token, $"Cannot convert from {source.Type} to {target}");
       return new NTypeCast (source) { Type = target };
    }
 
@@ -88,7 +99,15 @@ public class TypeAnalyze : Visitor<NType> {
    }
 
    public override NType Visit (NCallStmt c) {
-      throw new NotImplementedException ();
+      var fd = mSymbols.Find (c.Name.Text) as NFnDecl;
+      c.Params.ForEach (x => x.Accept (this));
+      if (c.Params.Length != fd?.Params.Length)
+         throw new ParseException (c.Name, $"There is no function {c.Name} that accepts {c.Params.Length} parameters");
+      int i = 0;
+      foreach (var fdParams in fd.Params)
+         if (fdParams.Type != c.Params[i++].Type)
+            c.Params[i - 1] = AddTypeCast (c.Name, c.Params[i - 1], fdParams.Type);
+      return fd.Return;
    }
    #endregion
 
@@ -136,12 +155,14 @@ public class TypeAnalyze : Visitor<NType> {
    public override NType Visit (NIdentifier d) {
       if (mSymbols.Find (d.Name.Text) is NVarDecl v) 
          return d.Type = v.Type;
-      throw new ParseException (d.Name, "Unknown variable");
+      if (mSymbols.Find (d.Name.Text) is NConst c)
+         return d.Type = c.Type;
+         throw new ParseException (d.Name, "Unknown variable");
    }
 
-   public override NType Visit (NFnCall f) {
-      throw new NotImplementedException ();
-   }
+   public override NType Visit (NFnCall f)
+      => mSymbols.Find (f.Name.Text) is NFnDecl fc ? f.Type = fc.Return :
+         throw new ParseException (f.Name, $"There is no function {f.Name} that returns {f.Type}");
 
    public override NType Visit (NTypeCast c) {
       c.Expr.Accept (this); return c.Type;

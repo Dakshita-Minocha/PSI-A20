@@ -10,7 +10,7 @@ public abstract class Visitor<T> {
    public abstract T Visit (NDeclarations d);
    public abstract T Visit (NVarDecl d);
    public abstract T Visit (NFnDecl f);
-
+   public abstract T Visit (NConst c);
    public abstract T Visit (NCompoundStmt b);
    public abstract T Visit (NAssignStmt a);
    public abstract T Visit (NWriteStmt w);
